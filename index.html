@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>AeroRail｜機捷機場旅程決策助理</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='18' fill='%230b4da2'/%3E%3Cpath d='M16 6h13l20 52H36z' fill='%2337c9f3'/%3E%3Cpath d='M29 6h11l12 52H41z' fill='%23fff' fill-opacity='.88'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eaf6ff;
+      --bg2: #f7fbff;
+      --ink: #10213b;
+      --muted: #40516d;
+      --subtle: #64748b;
+      --line: #d9e7f3;
+      --card: rgba(255, 255, 255, 0.94);
+      --card-solid: #ffffff;
+      --rail: #0b4da2;
+      --rail-2: #0f6fca;
+      --accent: #d98200;
+      --accent-2: #f0a42a;
+      --accent-soft: #fff3da;
+      --ok: #15803d;
+      --warn: #b45309;
+      --danger: #be123c;
+      --inbound: #0f766e;
+      --inbound-2: #14b8a6;
+      --shadow: 0 18px 44px rgba(32, 75, 120, 0.14);
+      --shadow-soft: 0 10px 28px rgba(31, 73, 118, 0.10);
+      --radius-xl: 32px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 14px;
+      --tap: 52px;
+      --font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+    }
+
+    body[data-mode="inbound"] {
+      --accent: var(--inbound);
+      --accent-2: var(--inbound-2);
+      --accent-soft: #e6fffb;
+      --bg: #e9fbf8;
+      --bg2: #f6fffd;
+    }
+
+    * { box-sizing: border-box; }
+    html { min-height: 100%; height: 100%; background: #dfeefa; }
+    body {
+      margin: 0;
+      min-height: 100%;
+      height: 100%;
+      font-family: var(--font);
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 14% 12%, rgba(255,255,255,.94), transparent 28%),
+        radial-gradient(circle at 86% 8%, rgba(120, 199, 255, .24), transparent 24%),
+        linear-gradient(180deg, var(--bg), var(--bg2) 48%, #ffffff);
+      font-size: 18px;
+      line-height: 1.55;
+      text-wrap: pretty;
+      overflow: hidden;
+    }
+
+    button, input, select { font: inherit; }
+    button { -webkit-tap-highlight-color: transparent; }
+    .page {
+      width: min(1220px, calc(100vw - 28px));
+      min-height: 0;
+      height: 100vh;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(360px, 452px) minmax(360px, 1fr);
+      gap: 34px;
+      align-items: start;
+      padding: 28px 0;
+    }
+
+    .phoneFrame {
+      position: sticky;
+      top: 18px;
+      width: min(452px, 100%);
+      margin: 0 auto;
+      padding: 12px;
+      border-radius: 46px;
+      background: linear-gradient(145deg, #173860, #0b1c31 56%, #071322);
+      box-shadow: 0 26px 80px rgba(7, 24, 45, .32);
+    }
+
+    .phone {
+      position: relative;
+      min-height: 0;
+      height: min(844px, calc(100vh - 80px));
+      max-height: none;
+      overflow: auto;
+      border-radius: 36px;
+      background:
+        linear-gradient(180deg, rgba(215, 239, 255, .96) 0%, rgba(244, 251, 255, .96) 34%, rgba(255,255,255,.98) 100%);
+      scrollbar-width: none;
+    }
+    .phone::-webkit-scrollbar { display: none; }
+
+    .statusBar {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .statusRight { display:flex; gap:5px; align-items:center; }
+    .signal { width: 18px; height: 10px; display:flex; align-items:flex-end; gap:2px; }
+    .signal i { display:block; width:3px; background:#12233d; border-radius:2px; }
+    .signal i:nth-child(1){height:4px}.signal i:nth-child(2){height:6px}.signal i:nth-child(3){height:8px}.signal i:nth-child(4){height:10px}
+    .battery { width: 24px; height: 12px; border:2px solid #12233d; border-radius:4px; position:relative; }
+    .battery::after { content:""; position:absolute; right:-5px; top:3px; width:3px; height:5px; border-radius:2px; background:#12233d; }
+    .battery::before { content:""; position:absolute; inset:2px 5px 2px 2px; border-radius:2px; background:#12233d; }
+
+    .appTop {
+      padding: 8px 24px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items: center;
+    }
+    .brandMark { display:flex; gap:12px; align-items:center; min-width:0; }
+    .logoMark {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      background: linear-gradient(145deg, #ffffff 0%, #d9efff 42%, #0b4da2 43%, #08285b 100%);
+      box-shadow: 0 8px 20px rgba(20, 78, 140, .18);
+      position: relative;
+      overflow:hidden;
+      flex: 0 0 auto;
+    }
+    .logoMark::before {
+      content:"";
+      position:absolute;
+      width: 15px;
+      height: 74px;
+      left: 11px;
+      top: -10px;
+      transform: rotate(-24deg);
+      background: #37c9f3;
+      border-radius: 999px;
+      box-shadow: 14px 0 0 rgba(255,255,255,.88);
+    }
+    .brandCopy { min-width:0; }
+    .brandCopy b { display:block; font-size: 22px; line-height:1.1; letter-spacing:-.03em; }
+    .brandCopy span { display:block; font-size: 12px; color: var(--muted); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .statusPill {
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(15, 77, 162, .12);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .modeSwitch {
+      margin: 0 22px 18px;
+      padding: 5px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.66);
+      border: 1px solid rgba(15,77,162,.10);
+    }
+    .modeSwitch button {
+      min-height: 48px;
+      border:0;
+      border-radius: 14px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 900;
+      cursor:pointer;
+    }
+    .modeSwitch button.active {
+      color: white;
+      background: linear-gradient(135deg, var(--rail), var(--accent));
+      box-shadow: 0 10px 24px rgba(12,77,151,.20);
+    }
+    body[data-view="home"] .modeSwitch { display: none; }
+
+    .screen { padding: 0 20px 102px; }
+    body[data-view="home"] .screen { min-height: 620px; padding-top: 22px; }
+    @keyframes enter { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+
+    .heroCard, .panelCard, .decisionCard, .softCard, .timelineCard {
+      background: var(--card);
+      border: 1px solid rgba(15, 77, 162, .12);
+      box-shadow: var(--shadow-soft);
+      border-radius: var(--radius-lg);
+    }
+    .heroCard { padding: 18px; margin-bottom: 14px; }
+    body[data-view="home"] .heroCard {
+      padding: 8px 4px 0;
+      margin-bottom: 0;
+      background: transparent;
+      border: 0;
+      box-shadow: none;
+      border-radius: 0;
+    }
+    body[data-view="home"] .heroCard h1 {
+      font-size: clamp(23px, 5.4vw, 28px);
+      line-height:1.18;
+      letter-spacing:-.035em;
+      margin: 0;
+      color: #5d728e;
+      font-weight: 760;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items:center;
+      gap:8px;
+      color: var(--accent);
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .dot { width: 8px; height: 8px; border-radius:999px; background: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
+    h1, h2, h3, p { margin-top: 0; }
+    .heroCard h1 { margin: 8px 0 7px; font-size: clamp(29px, 7vw, 36px); line-height:1.08; letter-spacing:-.045em; }
+    body[data-view="input"][data-mode="outbound"] .heroCard h1 { font-size: 25px; line-height:1.15; letter-spacing:-.055em; white-space:nowrap; }
+    body[data-view="input"][data-mode="inbound"] .heroCard h1 { font-size: 25px; line-height:1.15; letter-spacing:-.055em; white-space:nowrap; }
+    .heroCard p { margin-bottom: 0; color: var(--muted); font-size: 15px; }
+
+    .purposeGrid { display:grid; gap: 12px; margin: 14px 0 16px; }
+    body[data-view="home"] .purposeGrid { margin-top: 28px; gap: 14px; }
+    .purposeCard {
+      width: 100%;
+      min-height: 142px;
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 14px;
+      align-items:center;
+      text-align:left;
+      padding: 18px;
+      border-radius: 24px;
+      border: 1px solid rgba(15,77,162,.14);
+      background: rgba(255,255,255,.92);
+      box-shadow: var(--shadow-soft);
+      color: var(--ink);
+      cursor:pointer;
+    }
+    .purposeCard span { color: var(--accent); font-size: 13px; font-weight: 950; letter-spacing:.08em; }
+    .purposeCard h2 { margin: 5px 0 5px; font-size: 25px; line-height:1.12; letter-spacing:-.035em; }
+    .purposeCard p { margin:0; color: var(--muted); font-size: 14px; line-height:1.45; }
+    body[data-view="home"] .purposeCard { min-height: 174px; padding: 28px 18px; }
+    body[data-view="home"] .purposeCard.outbound {
+      background: linear-gradient(135deg, #fff7e8 0%, #fffdf8 72%);
+      border-color: #f0c36a;
+    }
+    body[data-view="home"] .purposeCard.inbound {
+      background: linear-gradient(135deg, #e7fffb 0%, #f9fffe 72%);
+      border-color: #89d8ce;
+    }
+    body[data-view="home"] .purposeCard.other {
+      min-height: 112px;
+      padding: 20px 18px;
+      background: linear-gradient(135deg, #eef4fb 0%, #fbfdff 72%);
+      border-color: #c8d7e8;
+      cursor: default;
+    }
+    body[data-view="home"] .purposeCard h2 { margin:0 0 8px; font-size: 44px; line-height:1.0; letter-spacing:-.06em; }
+    body[data-view="home"] .purposeCard p { font-size: 17px; line-height:1.35; font-weight:900; }
+    body[data-view="home"] .purposeCard.other h2 { font-size: 25px; letter-spacing:-.04em; }
+    body[data-view="home"] .purposeCard.other p { display:none; }
+    .purposeCard b {
+      width: 42px; height: 42px;
+      display:grid; place-items:center;
+      border-radius:999px;
+      color:#fff;
+      background: linear-gradient(135deg, var(--rail), var(--accent));
+      font-size: 22px;
+    }
+    .purposeCard.inbound span { color: var(--inbound); }
+    .purposeCard.inbound b { background: linear-gradient(135deg, var(--rail), var(--inbound)); }
+
+    .inputGrid { display:grid; gap: 10px; margin-top: 14px; }
+    .field label { display:block; color: var(--muted); font-size: 13px; font-weight: 900; margin: 0 0 6px 4px; }
+    .control {
+      width:100%; min-height: 50px;
+      padding: 0 16px;
+      border-radius: 16px;
+      border: 1px solid #c7d8ea;
+      background: #fff;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 800;
+      outline: none;
+    }
+    .control:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+    .locationControlRow { display:grid; grid-template-columns: 1fr 52px; gap: 10px; align-items:center; }
+    .gpsBtn {
+      width:52px; height:52px;
+      border: 1px solid rgba(217, 130, 0, .26);
+      border-radius: 999px;
+      color: var(--accent);
+      background: linear-gradient(135deg, #fff8ea, #fffdf8);
+      box-shadow: 0 10px 22px rgba(217, 130, 0, .14);
+      font-size: 0;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      position: relative;
+    }
+    .gpsBtn svg { width: 21px; height: 21px; display:block; }
+    body[data-mode="inbound"] .gpsBtn { color: var(--inbound); border-color: rgba(18, 184, 166, .30); background: linear-gradient(135deg, #e7fffb, #f8fffe); box-shadow: 0 10px 22px rgba(18,184,166,.13); }
+    .gpsBtn:active { transform: translateY(1px) scale(.98); }
+    .chipRow { display:flex; flex-wrap:wrap; gap: 9px; margin-top: 6px; }
+    .chip, .scenarioChip {
+      min-height: 38px;
+      padding: 0 13px;
+      border-radius: 999px;
+      border: 1px solid #cbdced;
+      background: #fff;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 900;
+      cursor:pointer;
+    }
+    .chip.active, .scenarioChip.active {
+      border-color: color-mix(in srgb, var(--accent) 65%, white);
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+    .primaryBtn, .secondaryBtn {
+      width:100%; min-height: 54px;
+      border-radius: 18px;
+      border:0;
+      font-size: 18px;
+      font-weight: 950;
+      cursor:pointer;
+      transition: transform .14s ease, box-shadow .14s ease, filter .14s ease;
+    }
+    .primaryBtn {
+      color: #fff;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 16px 30px rgba(217, 130, 0, .22);
+      margin-top: 12px;
+    }
+    body[data-mode="inbound"] .primaryBtn { box-shadow: 0 16px 30px rgba(15, 118, 110, .20); }
+    .secondaryBtn {
+      color: var(--rail);
+      background: #fff;
+      border: 1px solid #cbdced;
+    }
+    .primaryBtn:active, .secondaryBtn:active, .chip:active, .scenarioChip:active, .iconBtn:active { transform: translateY(1px) scale(.99); }
+
+    .flowStrip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 16px 0;
+    }
+    .flowStepMini {
+      min-height: 88px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.74);
+      border: 1px solid rgba(15,77,162,.10);
+      padding: 11px 8px;
+      text-align:center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .flowStepMini strong {
+      display:grid;
+      place-items:center;
+      width: 30px; height: 30px;
+      margin: 0 auto 7px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid #c7d8ea;
+      color: var(--rail);
+      font-size: 15px;
+    }
+    .flowStepMini.active strong { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .flowStepMini.active { color: var(--ink); box-shadow: 0 8px 18px rgba(24, 78, 131, .08); }
+
+    .decisionCard { padding: 14px 18px 18px; margin-bottom: 14px; }
+    .decisionTop { display:flex; justify-content:space-between; align-items:start; gap: 12px; margin-bottom: 10px; }
+    .flightBadge {
+      display:inline-flex; align-items:center; min-height: 34px; padding: 0 12px;
+      border-radius: 999px; background:#fff; border:1px solid #d3e0ee;
+      color: var(--ink); font-weight: 950; font-size: 16px;
+    }
+    .now { color: var(--muted); font-size: 13px; font-weight: 900; text-align:right; }
+    .bigTime {
+      margin: 4px 0 2px;
+      font-size: clamp(44px, 13vw, 58px);
+      line-height: .98;
+      letter-spacing: -.07em;
+      font-weight: 950;
+      color: var(--ink);
+    }
+    .bigTime small { font-size: .45em; letter-spacing: -.04em; }
+    .subtitle { font-size: 16px; font-weight: 950; color: var(--muted); margin-bottom: 12px; }
+    .decisionLead {
+      margin: 8px 0 14px;
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .departAction {
+      padding: 12px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--rail), #10355d 58%, var(--accent));
+      color:#fff;
+      box-shadow: 0 16px 34px rgba(20, 74, 136, .20);
+    }
+    .departAction span { display:block; font-size: 12px; font-weight: 900; opacity: .82; letter-spacing:.03em; }
+    .departAction strong { display:block; margin-top: 2px; font-size: 18px; line-height:1.14; letter-spacing:-.035em; }
+    .tripSummaryGrid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 9px 0; }
+    .tripSummaryItem {
+      min-height: 66px;
+      padding: 9px 10px;
+      border-radius: 16px;
+      background:#fff;
+      border: 1px solid #dbe6f0;
+      box-shadow: 0 7px 16px rgba(26,73,120,.06);
+    }
+    .tripSummaryItem span { display:block; color: var(--muted); font-size: 11px; font-weight: 950; margin-bottom: 3px; }
+    .tripSummaryItem strong { display:block; color: var(--ink); font-size: 17px; line-height:1.1; letter-spacing:-.035em; font-weight: 950; }
+    .tripSummaryItem.risk strong { color: var(--warn); }
+    .reasonBox, .backupBox {
+      padding: 14px;
+      border-radius: 18px;
+      background:#fff;
+      border: 1px solid #dbe6f0;
+      margin-top: 10px;
+    }
+    .reasonBox b, .backupBox b { display:block; margin-bottom: 6px; font-size: 15px; }
+    .reasonBox p, .backupBox p { margin:0; color: var(--muted); font-size: 14px; font-weight: 760; line-height:1.48; }
+    .backupBox { background: linear-gradient(180deg, #fff8ea, #fffdf8); border-color: #efd397; }
+    .progressLabel { display:flex; justify-content:space-between; font-size: 12px; color: var(--muted); font-weight: 900; margin: 7px 0 6px; }
+    .bar { height: 12px; border-radius:999px; background: #edf1f5; overflow:hidden; box-shadow: inset 0 1px 3px rgba(12,35,64,.08); }
+    .bar i { display:block; height:100%; width: var(--value, 28%); background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius:inherit; }
+
+    .pathLine { margin: 12px 0 12px; display:grid; grid-template-columns: repeat(4, 1fr); position:relative; gap: 5px; }
+    .pathLine::before { content:""; position:absolute; left: 11%; right: 11%; top: 20px; height: 2px; background: repeating-linear-gradient(90deg, #cad7e5 0 9px, transparent 9px 17px); }
+    .pathItem { position:relative; text-align:center; font-size: 12px; font-weight: 900; color: var(--muted); z-index: 1; }
+    .pathItem b { display:grid; place-items:center; width: 40px; height: 40px; margin:0 auto 5px; border-radius:999px; background:#fff; border: 2px solid #d1dfeb; color: var(--muted); font-size: 17px; box-shadow: 0 5px 14px rgba(24,66,110,.06); }
+    .pathItem.done b, .pathItem.active b { border-color: var(--accent); color: var(--accent); }
+    .pathItem.active span { color: var(--ink); }
+
+    .metricGrid { display:grid; grid-template-columns: 1fr 1fr; border: 1px solid #dbe6f0; border-radius: 20px; overflow:hidden; background:#fff; margin: 16px 0; }
+    .metric { padding: 12px 8px; text-align:center; border-bottom: 1px solid #e5eef6; }
+    .metric:nth-child(odd) { border-right: 1px solid #e5eef6; }
+    .metric:nth-last-child(-n+2) { border-bottom:0; }
+    .metric span { display:block; color: var(--muted); font-size: 13px; font-weight: 900; margin-bottom: 6px; }
+    .metric strong { display:block; font-size: 21px; line-height:1.1; font-weight: 950; letter-spacing:-.035em; }
+    .metric.risk strong { color: var(--warn); }
+
+    .basisPills { display:flex; flex-wrap:wrap; gap: 8px; margin: 12px 0 2px; }
+    .basisPills span { padding: 9px 11px; border-radius: 12px; background: #fff; border: 1px solid #d8e5f1; color: var(--ink); font-weight: 850; font-size: 13px; }
+
+    .alertBox {
+      margin-top: 14px;
+      padding: 15px 15px;
+      border-radius: 18px;
+      border: 1px solid color-mix(in srgb, var(--accent) 38%, #ffffff);
+      background: linear-gradient(180deg, var(--accent-soft), #fffdf7);
+      color: var(--ink);
+      font-size: 16px;
+      font-weight: 850;
+    }
+    .alertBox strong { color: var(--accent); font-size: 22px; }
+
+    .actionStack { display:grid; gap: 10px; margin-top: 14px; }
+    .twoActions { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .iconBtn { min-height: 48px; border-radius: 16px; border: 1px solid #cbdced; background: #fff; color: var(--rail); font-weight: 950; cursor:pointer; }
+
+    .panelCard { padding: 18px; margin-bottom: 14px; }
+    .panelCard h2 { font-size: 25px; line-height:1.16; letter-spacing:-.04em; margin-bottom: 7px; }
+    .panelCard p { color: var(--muted); font-size: 15px; margin-bottom: 0; }
+    .sectionTitle { display:flex; align-items:center; justify-content:space-between; gap: 12px; margin: 12px 4px 8px; }
+    .sectionTitle h2 { margin:0; font-size: 20px; line-height:1.2; letter-spacing:-.03em; }
+    .sectionTitle span { color: var(--subtle); font-size: 11px; font-weight:900; }
+    .sectionTitle + .chipRow { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+    .sectionTitle + .chipRow::-webkit-scrollbar { display: none; }
+
+    .evidenceSummaryGrid { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0 4px; }
+    .evidenceSummaryGrid .tripSummaryItem { min-height: 58px; }
+    .confidenceStrip { display:grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0 10px; }
+    .confidenceStep { border-radius: 14px; padding: 9px 6px; background:#fff; border:1px solid #dbe6f0; text-align:center; }
+    .confidenceStep b { display:block; font-size: 13px; line-height:1.15; color: var(--ink); }
+    .confidenceStep span { display:block; margin-top: 3px; font-size: 10px; font-weight: 900; color: var(--subtle); }
+    .sourceList { display:grid; gap: 10px; }
+    .sourceItem {
+      border-radius: 18px;
+      background:#fff;
+      border: 1px solid #dbe6f0;
+      overflow:hidden;
+    }
+    .sourceItem summary {
+      display:grid; grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items:center;
+      padding: 13px 14px;
+      cursor:pointer;
+      list-style:none;
+    }
+    .sourceItem summary::-webkit-details-marker { display:none; }
+    .sourceDot { width: 12px; height: 12px; border-radius: 999px; background: var(--accent); box-shadow: 0 0 0 5px var(--accent-soft); }
+    .sourceItem b { display:block; font-size: 15px; line-height:1.2; }
+    .sourceItem small { display:block; color: var(--subtle); margin-top: 3px; font-weight: 750; }
+    .statusTag { border-radius: 999px; padding: 6px 9px; background:#f1f6fb; color: var(--muted); font-size: 12px; font-weight: 950; white-space:nowrap; }
+    .statusTag.official { color:#0b4da2; background:#eaf3ff; }
+    .statusTag.live { color: #0b6b2b; background:#e8f8ed; }
+    .statusTag.forecast { color:#8a5400; background:#fff4db; }
+    .statusTag.history { color:#475569; background:#eef2f7; }
+    .statusTag.missing { color:#9f1239; background:#ffe4e6; }
+    .sourceDetail { padding: 0 14px 14px 38px; color: var(--muted); font-size: 13px; font-weight: 760; }
+    .sourceDetail dl { margin: 8px 0 0; display:grid; grid-template-columns: 74px 1fr; gap: 5px 8px; }
+    .sourceDetail dt { color: var(--subtle); font-weight: 950; }
+    .sourceDetail dd { margin:0; color: var(--ink); }
+    .impactList { display:grid; gap:8px; margin-top:10px; }
+    .impactItem { padding:10px; border-radius:14px; background:#f8fafc; border:1px solid #e2e8f0; }
+    .impactItem b { font-size:13px; }
+    .impactItem p { margin:3px 0 0; font-size:13px; }
+
+    .flowDiagram { display:grid; gap: 12px; }
+    .layerCard { padding: 15px; border-radius: 20px; background:#fff; border: 1px solid #dbe6f0; position:relative; }
+    .layerCard::after { content:""; position:absolute; left: 50%; bottom: -12px; transform: translateX(-50%); width: 2px; height: 12px; background: #c9d8e8; }
+    .layerCard:last-child::after { display:none; }
+    .layerHead { display:flex; gap:10px; align-items:flex-start; }
+    .layerNo { display:inline-grid; place-items:center; flex:0 0 auto; width: 32px; height: 32px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-weight: 950; }
+    .layerCard h3 { margin:0 0 4px; font-size: 17px; line-height:1.2; }
+    .layerCard p { margin:0; color: var(--muted); font-size: 13px; }
+    .miniList { display:grid; gap:6px; margin-top:10px; }
+    .miniList span { display:block; padding:7px 9px; border-radius:12px; background:#f8fafc; border:1px solid #e2e8f0; color:var(--ink); font-size:12px; font-weight:850; }
+    .decisionRuleGrid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px; }
+    .decisionRule { padding:9px; border-radius:14px; background:var(--accent-soft); color:var(--ink); border:1px solid rgba(15,77,162,.08); }
+    .decisionRule b { display:block; font-size:12px; }
+    .decisionRule small { display:block; margin-top:2px; color:var(--muted); font-weight:800; line-height:1.35; }
+
+    .opsGrid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .opsMetric { background:#fff; border:1px solid #dbe6f0; border-radius: 18px; padding: 14px; }
+    .opsMetric span { color: var(--muted); font-size: 12px; font-weight: 900; }
+    .opsMetric strong { display:block; margin-top:4px; font-size: 25px; line-height:1.1; letter-spacing:-.04em; }
+    .trendList { display:grid; gap:9px; margin-top:12px; }
+    .trendItem { padding:11px; border-radius:16px; background:#fff; border:1px solid #dbe6f0; }
+    .trendItem b { display:block; font-size:13px; }
+    .trendItem p { margin:3px 0 0; font-size:13px; color:var(--muted); }
+
+    .bottomNav {
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+      margin-top: -86px;
+      padding: 9px 14px calc(9px + env(safe-area-inset-bottom));
+      background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,.94) 26%, rgba(255,255,255,.98));
+      display:grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 7px;
+      border-radius: 0 0 36px 36px;
+    }
+    .bottomNav button {
+      min-height: 56px;
+      border: 0;
+      border-radius: 18px;
+      background: transparent;
+      color: var(--subtle);
+      font-size: 10px;
+      font-weight: 950;
+      cursor:pointer;
+      display:grid;
+      place-items:center;
+      gap:2px;
+    }
+    .navIcon { width: 23px; height: 23px; border-radius: 8px; border: 2px solid currentColor; display:block; position:relative; }
+    .navIcon.navSvg { border: 0; border-radius: 0; overflow: visible; }
+    .navIcon.card::before { content:""; position:absolute; left:4px; right:4px; top:6px; height:2px; background: currentColor; box-shadow: 0 6px 0 currentColor; }
+    .navIcon.home::before { content:""; position:absolute; left:5px; right:5px; top:5px; height:10px; transform: rotate(45deg); border-left:2px solid currentColor; border-top:2px solid currentColor; }
+    .navIcon.home::after { content:""; position:absolute; left:6px; right:6px; bottom:4px; height:9px; border:2px solid currentColor; border-top:0; border-radius:0 0 4px 4px; }
+    .navIcon.data { border-radius:999px; }
+    .navIcon.data::before { content:""; position:absolute; inset:4px; border-radius:999px; border:2px solid currentColor; }
+    .navIcon.flow::before { content:""; position:absolute; width:5px; height:5px; border-radius:999px; background:currentColor; left:3px; top:3px; box-shadow: 11px 0 0 currentColor, 5px 11px 0 currentColor; }
+    .navIcon.ops::before { content:""; position:absolute; left:4px; bottom:4px; width:3px; height:9px; background:currentColor; box-shadow: 6px -4px 0 currentColor, 12px -8px 0 currentColor; }
+    .bottomNav button.active { color: var(--accent); background: var(--accent-soft); }
+    body[data-view="home"] .bottomNav { position: absolute; left: 0; right: 0; bottom: 0; margin-top: 0; }
+
+    .sidePanel { padding-top: 22px; }
+    .sideHero {
+      background: rgba(255,255,255,.72);
+      border: 1px solid rgba(15,77,162,.12);
+      border-radius: 34px;
+      box-shadow: var(--shadow);
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+    .sideHero h1 { font-size: clamp(34px, 4vw, 58px); line-height:1.02; letter-spacing:-.06em; margin: 10px 0 12px; }
+    .sideHero p { color: var(--muted); font-size: 19px; margin-bottom: 0; }
+    .designNotes { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .noteCard { background:#fff; border: 1px solid #dbe6f0; border-radius: 24px; padding: 18px; box-shadow: var(--shadow-soft); }
+    .noteCard b { display:block; font-size: 17px; margin-bottom: 6px; }
+    .noteCard span { color: var(--muted); font-size: 14px; display:block; }
+    .previewLinks { display:flex; flex-wrap:wrap; gap: 9px; margin-top: 18px; }
+    .previewLinks a { color: var(--rail); background:#fff; border:1px solid #dbe6f0; border-radius: 999px; padding: 9px 12px; text-decoration:none; font-weight:900; font-size: 14px; }
+
+    .smallNotice {
+      margin: 12px 4px 0;
+      color: var(--subtle);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    @media (max-width: 880px) {
+      .page { width: 100%; padding: 0; display:block; }
+      body { overflow: auto; }
+      .phoneFrame { position: static; width: 100%; min-height: 100vh; padding: 0; border-radius:0; background: transparent; box-shadow:none; }
+      .phone { min-height: 100vh; height:auto; max-height: none; border-radius:0; overflow: visible; scrollbar-width: auto; }
+      .bottomNav { border-radius:0; }
+      .sidePanel { display:none; }
+    }
+
+    @media (max-width: 390px) {
+      body { font-size: 17px; }
+      .screen { padding-left: 14px; padding-right: 14px; }
+      .appTop { padding-left: 18px; padding-right: 18px; }
+      .modeSwitch { margin-left: 16px; margin-right: 16px; }
+      .metric strong { font-size: 22px; }
+      .bigTime { font-size: 48px; }
+      .twoActions { grid-template-columns: 1fr; }
+      .bottomNav { gap:3px; padding-left: 8px; padding-right: 8px; }
+      .bottomNav button { font-size: 10px; }
+    }
+  </style>
+</head>
+<body data-mode="outbound">
+  <main class="page">
+    <section class="phoneFrame" aria-label="AeroRail mobile service">
+      <div class="phone">
+        <div class="statusBar"><span id="phoneTime">06:42</span><span class="statusRight"><span>5G</span><span class="signal"><i></i><i></i><i></i><i></i></span><span class="battery"></span></span></div>
+        <header class="appTop">
+          <div class="brandMark"><div class="logoMark" aria-hidden="true"></div><div class="brandCopy"><b>AeroRail</b><span>機捷機場旅程決策助理</span></div></div>
+          <div class="statusPill" id="statusPill">資料更新中</div>
+        </header>
+        <nav class="modeSwitch" aria-label="情境切換">
+          <button id="modeOutbound" class="active" type="button">出境前往機場</button>
+          <button id="modeInbound" type="button">入境接續交通</button>
+        </nav>
+        <section id="screen" class="screen"></section>
+        <nav id="bottomNav" class="bottomNav" aria-label="主要功能導覽"></nav>
+      </div>
+    </section>
+
+    <aside class="sidePanel">
+      <div class="sideHero">
+        <span class="eyebrow"><span class="dot"></span>AeroRail</span>
+        <h1>AeroRail<br>機捷機場旅程決策助理</h1>
+        <p>先選擇今天的旅程目的，再依航班、位置與接續需求查看可執行的機捷旅程建議。</p>
+        <div class="previewLinks">
+          <a href="?view=home">首頁</a>
+          <a href="?view=input">輸入畫面</a>
+          <a href="?view=outbound">出境卡</a>
+          <a href="?view=evidence">建議依據</a>
+          <a href="?view=inbound">入境卡</a>
+          <a href="?view=flow">決策流程</a>
+          <a href="?view=ops">服務趨勢</a>
+        </div>
+      </div>
+      <div class="designNotes">
+        <div class="noteCard"><b>快速查詢</b><span>只需航班、目前位置或目的地，即可先取得可行安排。</span></div>
+        <div class="noteCard"><b>以機捷為主</b><span>優先整理桃園機捷班次、入口站與抵達航廈時間。</span></div>
+        <div class="noteCard"><b>看得懂依據</b><span>每個建議都會標示資料時間、推估狀態與風險原因。</span></div>
+        <div class="noteCard"><b>出入境都可用</b><span>前往機場與離開機場使用一致的操作方式。</span></div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const root = document.getElementById('screen');
+    const bottomNav = document.getElementById('bottomNav');
+    const appState = {
+      mode: 'outbound',
+      view: 'home',
+      scenario: 'crowd',
+      inboundScenario: 'late',
+      flight: 'BR186｜10:30｜T2',
+      location: '台北車站附近',
+      destination: '台北車站',
+      chips: new Set(['大型行李'])
+    };
+
+    const query = new URLSearchParams(location.search);
+    const initialView = query.get('view');
+    const initialMode = query.get('mode');
+    const initialScenario = query.get('scenario');
+    if (initialMode === 'inbound' || initialMode === 'outbound') appState.mode = initialMode;
+    if (initialView) {
+      appState.view = initialView;
+      if (initialView === 'inbound') appState.mode = 'inbound';
+      if (initialView === 'outbound') appState.mode = 'outbound';
+    }
+
+    const outboundData = {
+      normal: {
+        label: '一般情境', time: '07:05', title: '07:05 前出門，搭 07:18 直達車', progress: 28,
+        flight: 'BR186 10:30 T2', now: '現在 06:42', entry: 'A1 台北車站', train: '07:18 直達車', buffer: '2小時10分', risk: '中',
+        next: '現在整理行李，07:05 前離開目前位置',
+        reason: '航班時間、A1 直達車旅行時間與安檢當日預測合併計算後，這個安排可保留約 2 小時以上機場緩衝。',
+        backup: '若 07:20 後才出門，改看 07:33 直達車；若緩衝低於 90 分，再評估接送備案。',
+        alert: '07:05 前出門；若 07:20 後出門，優先改搭 07:33 直達車。',
+        basis: ['人潮當日預測偏高', '安檢當日預測約 12 分', '桃捷未見重大通阻公告', '暑假旅運高峰歷史基準'],
+        path: ['確認航班', '前往 A1', '搭乘機捷', '抵達航廈']
+      },
+      crowd: {
+        label: '航廈人潮偏高', time: '06:55', title: '06:55 前出門，優先搭 07:03 直達車', progress: 24,
+        flight: 'BR186 10:30 T2', now: '現在 06:42', entry: 'A1 台北車站', train: '07:03 直達車', buffer: '2小時25分', risk: '中高',
+        next: '13 分鐘內出門，到 A1 後直接往直達車月台',
+        reason: 'T2 出境人潮以當日預測偏高處理，安檢與報到彈性需前移，因此把出門時間提早 10 分鐘。',
+        backup: '若錯過 07:03，改搭 07:18 直達車並減少航廈內停留；若又延後，保留計程車或接送備案。',
+        alert: '航廈人潮偏高，建議提早進入機捷節點，並保留安檢與報到彈性。',
+        basis: ['T2 出境人次當日預測偏高', '安檢當日預測約 15 分', '直達車班距正常', '暑假／連假歷史基準'],
+        path: ['確認航班', '提早進站', '直達車優先', '保留緩衝']
+      },
+      delay: {
+        label: '桃捷輕微延誤', time: '06:50', title: '06:50 前出門，保留下一班備案', progress: 22,
+        flight: 'BR186 10:30 T2', now: '現在 06:42', entry: 'A1 台北車站', train: '07:03 或 07:18', buffer: '約2小時', risk: '中高',
+        next: '先往 A1，進站後依月台顯示選 07:03 或 07:18',
+        reason: '到離站資訊目前以延誤推估處理，提前進站可保留班次選擇，不把單一班次視為唯一方案。',
+        backup: '若 07:18 後仍無法上車，立即重算抵達航廈時間；緩衝不足時改採接送或車行備案。',
+        alert: '到離站資訊顯示班次可能略有延後，建議提前到站，並同步保留 07:18 班次後的備案。',
+        basis: ['到離站延誤推估 4 分', '航班官方資訊／預估', '安檢當日預測約 12 分', '今日未見重大通阻公告'],
+        path: ['確認延誤', '提前進站', '查看班次', '重算緩衝']
+      },
+      parking: {
+        label: '停車壓力偏高', time: '06:45', title: '06:45 前出門，A18 轉乘較保守', progress: 20,
+        flight: 'BR186 10:30 T2', now: '現在 06:42', entry: 'A18 高鐵桃園站', train: '07:05 普通車', buffer: '1小時55分', risk: '高',
+        next: '先確認停車位置，預留找車位與步行進站時間',
+        reason: '停車壓力以當日預測偏高處理，A18 銜接可行但會壓縮航廈緩衝，因此出發時間需更保守。',
+        backup: '若停車場排隊或車位不足，請改往接送臨停或計程車下客；不要再壓縮航廈報到時間。',
+        alert: '停車壓力偏高，若自行開車銜接機捷，請提早出發並保留找車位時間。',
+        basis: ['停車壓力當日預測偏高', 'A18 轉乘可行', '航班官方資訊／預估', '安檢當日預測約 12 分'],
+        path: ['確認停車', '前往 A18', '普通車銜接', '保守緩衝']
+      }
+    };
+
+    const inboundData = {
+      late: {
+        label: '晚間抵達', flight: 'BR187 22:20 T2', now: '現在 22:34', time: '23:05', title: '23:05 前離開入境大廳，搭 23:16 往台北', progress: 64,
+        entry: '機場第二航廈站', train: '23:16 直達／普通銜接', buffer: '末班前 38 分', risk: '中',
+        next: '先完成通關與領取行李，23:05 前往機捷第二航廈站',
+        reason: '航班抵達時間、通關與行李提領推估合併計算後，23:16 班次仍可銜接台北方向，並保留末班前約 38 分鐘彈性。',
+        backup: '若 23:10 後才離開入境大廳，改看 23:31 班次；若已低於末班緩衝，直接保留機場夜間接送或市區巴士備案。',
+        alert: '通關與行李提領為推估；若 23:10 後才離開入境大廳，請改看下一班與夜間接駁備案。',
+        basis: ['航班抵達資訊／預估', '通關與行李提領推估 25 分', '末班風險中', '台北方向可銜接'],
+        path: ['航班抵達', '通關行李', '搭乘機捷', '接續轉乘']
+      },
+      taipei: {
+        label: '台北接續', flight: 'CI101 21:50 T1', now: '現在 22:18', time: '22:52', title: '22:52 前出站，優先往 A1 台北車站', progress: 58,
+        entry: '機場第一航廈站', train: '23:02 直達車', buffer: '轉乘約 26 分', risk: '中低',
+        next: '出站後直接往直達車月台，抵達 A1 再依目的地轉乘北捷或計程車',
+        reason: '目的地在台北市區時，A1 台北車站仍是最清楚的轉乘節點；夜間北捷班距需保守看待，因此先保留抵達後轉乘時間。',
+        backup: '若行李或通關延後，改搭下一班並把台北市內最後一段改成計程車；不要把北捷末班視為唯一接續。',
+        alert: '台北方向可行，但夜間市區最後一段仍需保留轉乘彈性。',
+        basis: ['桃捷時刻表基準', '台北方向轉乘歷史基準', '通關推估 20 分', '目前未取得北捷即時觀測'],
+        path: ['確認目的地', '往第一航廈站', '直達車到 A1', '市區轉乘']
+      },
+      hsr: {
+        label: '高鐵接續', flight: 'BR187 22:20 T2', now: '現在 22:42', time: '23:00', title: '23:00 前離開入境大廳，先看 A18 銜接', progress: 68,
+        entry: '機場第二航廈站', train: '23:12 普通車往 A18', buffer: '高鐵轉乘偏緊', risk: '中高',
+        next: '先查高鐵末段班次；若仍可搭，23:00 前往機捷月台並在 A18 快速轉乘',
+        reason: '往中南部旅客的關鍵不是只到 A18，而是 A18 後高鐵末段是否仍可銜接；因此把高鐵可搭性放進首屏判斷。',
+        backup: '若高鐵末段已不穩，改以桃園／機場周邊住宿、接送或隔日早班作為備案，不建議硬追末段班次。',
+        alert: '高鐵接續偏緊，請先確認高鐵末段班次再決定是否往 A18。',
+        basis: ['A18 銜接時刻表基準', '高鐵末段班次需再確認', '行李提領推估 22 分', '夜間轉乘歷史基準'],
+        path: ['確認高鐵', '前往機捷', '抵達 A18', '轉乘高鐵']
+      },
+      luggage: {
+        label: '行李延遲', flight: 'BR187 22:20 T2', now: '現在 22:50', time: '23:25', title: '23:25 前出站，改採保守接續', progress: 72,
+        entry: '機場第二航廈站', train: '23:36 普通車', buffer: '末班前 18 分', risk: '高',
+        next: '領到行李後直接往機捷；同時先保留夜間接送或住宿備案',
+        reason: '行李提領延遲會壓縮末班前彈性，也提高台北或高鐵後段轉乘失敗機率；本情境不再把單一鐵道接續視為穩定方案。',
+        backup: '若 23:25 後才離開入境大廳，請優先改用夜間接送、市區巴士或機場周邊住宿；隔日再銜接高鐵較安全。',
+        alert: '行李提領延遲將壓縮末班緩衝，建議同步保留機場夜間接送或市區巴士備案。',
+        basis: ['行李提領推估延長', '機捷末班接近', '台北方向仍可行但偏緊', '接續北捷／高鐵風險提高'],
+        path: ['確認行李', '重算出站', '末班檢查', '備案提示']
+      }
+    };
+
+    if (initialScenario && outboundData[initialScenario]) appState.scenario = initialScenario;
+    if (initialScenario && inboundData[initialScenario]) appState.inboundScenario = initialScenario;
+
+    const evidenceSources = [
+      {
+        name: '航班時間與航廈', updated: '依航班欄位更新', status: '官方資訊／預估', kind: 'official', confidence: '高', level: '官方資訊',
+        impact: '決定出門或出站時間的最後可接受界線，也用來確認 T1／T2 航廈。',
+        use: '出境看表定、預估與航廈；入境看預估抵達與實際出關起點。',
+        limit: '若未取得實際到離站資料，畫面只以預估呈現，仍需以航空公司與機場公告為準。'
+      },
+      {
+        name: '桃園機捷時刻表與停站模式', updated: '公開班表／不定期更新', status: '官方資訊', kind: 'official', confidence: '高', level: '基準班表',
+        impact: '決定建議進站點、直達車／普通車、A1／A18 等可搭班次與旅行時間。',
+        use: '出境用於選擇前往航廈班次；入境用於檢查台北方向與高鐵桃園站接續。',
+        limit: '公開班表不是現場月台顯示；如遇臨時通阻，請以站內公告為準。'
+      },
+      {
+        name: '桃捷到離站與營運通阻', updated: '當日檢查', status: '目前未取得即時觀測', kind: 'missing', confidence: '中', level: '當日推估',
+        impact: '影響是否提前進站、是否保留下一班或改採接送備案。',
+        use: '沒有直接觀測時，只用保守延誤推估提醒，不把單一班次視為唯一方案。',
+        limit: '不宣稱已掌握現場班車位置；旅客進站後仍以車站現場顯示為準。'
+      },
+      {
+        name: '安檢、通關與行李提領', updated: '依當日情境推估', status: '當日預測', kind: 'forecast', confidence: '中', level: '推估資料',
+        impact: '出境時調整航廈緩衝；入境時估算何時能離開入境大廳與是否追得上末班。',
+        use: '大型行李、親子同行、晚間抵達或行李延遲會增加緩衝。',
+        limit: '本階段未宣稱取得官方即時等候時間；遇人潮尖峰請保守處理。'
+      },
+      {
+        name: '航廈人潮、停車與季節性旅運', updated: '當日預測＋歷史基準', status: '當日預測', kind: 'forecast', confidence: '中', level: '風險修正',
+        impact: '影響出發時間是否前移、停車銜接是否偏高風險、是否提示減少航廈停留。',
+        use: '暑假、連假、航廈尖峰與停車壓力只作保守加權。',
+        limit: '未顯示真實停車空位，也不把歷史高峰視為現場即刻狀態。'
+      },
+      {
+        name: '高鐵、北捷與市區最後一段接續', updated: '表定班次／需再確認', status: '歷史基準', kind: 'history', confidence: '中低', level: '接續基準',
+        impact: '入境接續時判斷 A18 後高鐵末段、A1 後北捷或計程車是否需要備案。',
+        use: '夜間接續偏緊時，優先提示確認末段班次，並給住宿、接送或隔日早班備案。',
+        limit: '目前未取得北捷與高鐵現場即時觀測，不把末班接續寫成保證可搭。'
+      },
+      {
+        name: '天候與外部交通風險', updated: '公告／推估', status: '公告／推估', kind: 'forecast', confidence: '中', level: '風險提示',
+        impact: '影響前往機捷站的路面時間與是否需提高緩衝。',
+        use: '只在可能影響進站或抵達時間時提高風險提示。',
+        limit: '不取代正式警報或道路資訊；重大狀況仍需查看官方公告。'
+      }
+    ];
+
+    const navItems = [
+      ['home', '首頁', 'home'],
+      ['input', '查詢', 'card'],
+      ['outbound', '旅程卡', 'card'],
+      ['evidence', '依據', 'data'],
+      ['flow', '流程', 'flow'],
+      ['ops', '趨勢', 'data']
+    ];
+
+    function scenarioData() { return appState.mode === 'inbound' ? inboundData[appState.inboundScenario] : outboundData[appState.scenario]; }
+    function setView(view) {
+      appState.view = view;
+      if (view === 'inbound') appState.mode = 'inbound';
+      if (view === 'outbound') appState.mode = 'outbound';
+      render();
+      const next = new URL(location.href);
+      next.searchParams.set('view', view);
+      next.searchParams.set('mode', appState.mode);
+      history.replaceState(null, '', next);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setMode(mode) {
+      appState.mode = mode;
+      appState.view = 'input';
+      render();
+      const next = new URL(location.href);
+      next.searchParams.set('view', appState.view);
+      next.searchParams.set('mode', appState.mode);
+      history.replaceState(null, '', next);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function selectPurpose(mode) {
+      appState.mode = mode;
+      appState.view = 'input';
+      render();
+      const next = new URL(location.href);
+      next.searchParams.set('view', 'input');
+      next.searchParams.set('mode', mode);
+      history.replaceState(null, '', next);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function chip(name) {
+      const active = appState.chips.has(name) ? 'active' : '';
+      return `<button class="chip ${active}" data-chip="${name}" type="button">${name}</button>`;
+    }
+
+    function renderInput() {
+      const modeText = appState.mode === 'inbound' ? '入境後接續交通' : '出境前往機場';
+      const title = appState.mode === 'inbound' ? '輸入抵達航班與目的地' : '輸入航班與目前位置';
+      const copy = appState.mode === 'inbound'
+        ? '整理可銜接的機捷班次、目的地方向、末班風險；推估資料會清楚標示。'
+        : '整理建議出門時間、機捷入口、可搭班次與緩衝；推估資料會清楚標示。';
+      const locationField = appState.mode === 'inbound'
+        ? `<div class="field"><label>要前往哪裡</label><input id="destInput" class="control" list="destinationSuggestions" value="${appState.destination}" placeholder="輸入車站、地址或目的地" autocomplete="street-address"><datalist id="destinationSuggestions"><option value="台北車站"><option value="高鐵桃園站"><option value="新北／北捷方向"><option value="台北市政府站"><option value="板橋車站"></datalist></div>`
+        : `<div class="field"><label>現在在哪裡</label><div class="locationControlRow"><input id="locInput" class="control" list="locationSuggestions" value="${appState.location}" placeholder="輸入地址、車站或地標" autocomplete="street-address"><button id="gpsBtn" class="gpsBtn" type="button" aria-label="使用 GPS 取得目前位置" title="使用 GPS 取得目前位置"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="none" stroke="currentColor" stroke-width="2"></circle><circle cx="12" cy="12" r="1.6" fill="currentColor"></circle><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg></button></div><datalist id="locationSuggestions"><option value="台北車站附近"><option value="新北板橋"><option value="桃園青埔／停車"><option value="台北松山機場"><option value="信義區市政府站"></datalist></div>`;
+      const flightField = appState.mode === 'inbound'
+        ? `<div class="field"><label>抵達航班</label><select id="flightSelect" class="control"><option>BR187｜22:20｜T2</option><option>CI101｜21:50｜T1</option><option>JX803｜23:05｜T2</option></select></div>`
+        : `<div class="field"><label>出境航班</label><select id="flightSelect" class="control"><option>BR186｜10:30｜T2</option><option>CI100｜09:10｜T1</option><option>JX802｜11:20｜T1</option></select></div>`;
+      const conditionChips = appState.mode === 'inbound'
+        ? ['大型行李','親子同行','長者同行','首次搭乘','晚間抵達','行李延遲']
+        : ['大型行李','親子同行','長者同行','首次搭乘','停車銜接','額外購物／餐飲時間'];
+      const actionLabel = appState.mode === 'inbound' ? '查看接續班次建議' : '查看建議出門時間';
+      return `
+        <article class="heroCard">
+          <span class="eyebrow"><span class="dot"></span>${modeText}</span>
+          <h1>${title}</h1>
+          <p>${copy}</p>
+          <div class="inputGrid">
+            ${flightField}
+            ${locationField}
+            <div class="field"><label>可選條件</label><div class="chipRow">${conditionChips.map(chip).join('')}</div></div>
+          </div>
+          <button class="primaryBtn" id="generateBtn" type="button">${actionLabel}</button>
+        </article>
+      `;
+    }
+
+    function renderHome() {
+      return `
+        <article class="heroCard">
+          <h1>今天要搭機捷往哪裡？</h1>
+        </article>
+        <div class="purposeGrid">
+          <button class="purposeCard outbound" type="button" data-purpose="outbound">
+            <div><h2>去機場</h2><p>查看出門時間與可搭班次</p></div><b>→</b>
+          </button>
+          <button class="purposeCard inbound" type="button" data-purpose="inbound">
+            <div><h2>離開機場</h2><p>查看回家或轉乘安排</p></div><b>→</b>
+          </button>
+          <button class="purposeCard other" type="button" aria-disabled="true">
+            <div><h2>查機捷資訊</h2></div><b>＋</b>
+          </button>
+        </div>
+      `;
+    }
+
+    function renderDecision(kind = 'outbound') {
+      const d = kind === 'inbound' ? inboundData[appState.inboundScenario] : outboundData[appState.scenario];
+      const title = kind === 'inbound' ? '入境接續旅程決策卡' : '出境旅程決策卡';
+      const subtitle = kind === 'inbound' ? '抵達後的可行交通安排' : '何時出門、從哪站進、搭哪班與備案';
+      const scenarioButtons = kind === 'inbound'
+        ? Object.entries(inboundData).map(([k,v])=>`<button class="scenarioChip ${appState.inboundScenario===k?'active':''}" data-inbound-scenario="${k}" type="button">${v.label}</button>`).join('')
+        : Object.entries(outboundData).map(([k,v])=>`<button class="scenarioChip ${appState.scenario===k?'active':''}" data-scenario="${k}" type="button">${v.label}</button>`).join('');
+      if (kind === 'outbound') {
+        return `
+          <div class="sectionTitle"><h2>${title}</h2><span>${subtitle}</span></div>
+          <div class="chipRow" style="margin-bottom:12px">${scenarioButtons}</div>
+          <article class="decisionCard">
+            <div class="decisionTop"><span class="flightBadge">${d.flight}</span><span class="now">${d.now}<br>官方資訊／當日推估</span></div>
+            <div class="decisionLead">
+              <div>
+                <div class="bigTime">${d.time} <small>前出門</small></div>
+                <div class="subtitle">${d.title}</div>
+              </div>
+              <div class="departAction"><span>下一步</span><strong>${d.next}</strong></div>
+            </div>
+            <div class="progressLabel"><span>旅程安排進度 ${d.progress}%</span><span>資料狀態：官方資訊／當日推估</span></div>
+            <div class="bar" style="--value:${d.progress}%"><i></i></div>
+            <div class="tripSummaryGrid" aria-label="旅程建議摘要">
+              <div class="tripSummaryItem"><span>從哪站進</span><strong>${d.entry}</strong></div>
+              <div class="tripSummaryItem"><span>搭哪班</span><strong>${d.train}</strong></div>
+              <div class="tripSummaryItem"><span>機場緩衝</span><strong>${d.buffer}</strong></div>
+              <div class="tripSummaryItem risk"><span>目前風險</span><strong>${d.risk}</strong></div>
+            </div>
+            <div class="pathLine">${d.path.map((p,i)=>`<div class="pathItem ${i===0?'done':i===1?'active':''}"><b>${i+1}</b><span>${p}</span></div>`).join('')}</div>
+            <div class="reasonBox"><b>為什麼這樣建議</b><p>${d.reason}</p></div>
+            <div class="backupBox"><b>備案</b><p>${d.backup}</p></div>
+            <strong style="display:block;margin-top:12px">判斷依據</strong>
+            <div class="basisPills">${d.basis.map(x=>`<span>${x}</span>`).join('')}</div>
+            <div class="actionStack">
+              <button class="primaryBtn" type="button" data-go="evidence">查看建議依據</button>
+              <div class="twoActions"><button class="iconBtn" type="button" data-go="flow">看資料流</button><button class="iconBtn" type="button" data-go="inbound">切換入境</button></div>
+            </div>
+          </article>
+        `;
+      }
+      return `
+        <div class="sectionTitle"><h2>${title}</h2><span>${subtitle}</span></div>
+        <div class="chipRow" style="margin-bottom:12px">${scenarioButtons}</div>
+        <article class="decisionCard">
+          <div class="decisionTop"><span class="flightBadge">${d.flight}</span><span class="now">${d.now}<br>官方資訊／當日推估</span></div>
+          <div class="decisionLead">
+            <div>
+              <div class="bigTime">${d.time} <small>前出站</small></div>
+              <div class="subtitle">${d.title}</div>
+            </div>
+            <div class="departAction"><span>下一步</span><strong>${d.next}</strong></div>
+          </div>
+          <div class="progressLabel"><span>接續準備進度 ${d.progress}%</span><span>資料狀態：官方資訊／當日推估</span></div>
+          <div class="bar" style="--value:${d.progress}%"><i></i></div>
+          <div class="tripSummaryGrid" aria-label="入境接續摘要">
+            <div class="tripSummaryItem"><span>從哪站搭</span><strong>${d.entry}</strong></div>
+            <div class="tripSummaryItem"><span>搭哪班</span><strong>${d.train}</strong></div>
+            <div class="tripSummaryItem"><span>末班緩衝</span><strong>${d.buffer}</strong></div>
+            <div class="tripSummaryItem risk"><span>目前風險</span><strong>${d.risk}</strong></div>
+          </div>
+          <div class="pathLine">${d.path.map((p,i)=>`<div class="pathItem ${i===0?'done':i===1?'active':''}"><b>${i+1}</b><span>${p}</span></div>`).join('')}</div>
+          <div class="reasonBox"><b>為什麼這樣建議</b><p>${d.reason}</p></div>
+          <div class="backupBox"><b>備案</b><p>${d.backup}</p></div>
+          <strong style="display:block;margin-top:12px">判斷依據</strong>
+          <div class="basisPills">${d.basis.map(x=>`<span>${x}</span>`).join('')}</div>
+          <div class="actionStack">
+            <button class="primaryBtn" type="button" data-go="evidence">查看建議依據</button>
+            <div class="twoActions"><button class="iconBtn" type="button" data-go="flow">看資料流</button><button class="iconBtn" type="button" data-go="outbound">切換出境</button></div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderEvidence() {
+      const d = scenarioData();
+      const isInbound = appState.mode === 'inbound';
+      const impacts = isInbound
+        ? [
+            ['離開入境大廳時間', '由航班抵達、通關與行李提領推估共同決定。'],
+            ['末班與後段轉乘', '由桃捷班表、高鐵／北捷接續基準與目前未取得即時觀測的限制共同判斷。'],
+            ['備案', '當末班或後段轉乘偏緊時，提前提示夜間接送、住宿或隔日早班。']
+          ]
+        : [
+            ['出門時間', '由航班時間、機捷班次、安檢當日預測與人潮風險共同決定。'],
+            ['可搭班次', '由桃捷公開班表與停站模式推估；臨時通阻不寫成已即時掌握。'],
+            ['備案', '當緩衝低於保守門檻時，提示下一班、減少停留或接送方案。']
+          ];
+      return `
+        <article class="panelCard">
+          <span class="eyebrow"><span class="dot"></span>建議依據檢視</span>
+          <h2>${isInbound ? '這張接續卡為何這樣建議？' : '這張旅程卡為何這樣建議？'}</h2>
+          <p>目前建議依官方資訊、公開班表、當日推估與歷史基準組合而成；未取得直接即時觀測的項目會明確標示，不作保證可搭或現場班車位置承諾。</p>
+          <div class="evidenceSummaryGrid">
+            <div class="tripSummaryItem"><span>目前建議</span><strong>${d.time}${isInbound ? ' 前出站' : ' 前出門'}</strong></div>
+            <div class="tripSummaryItem"><span>資料信心</span><strong>${d.risk === '高' ? '需保守' : '可參考'}</strong></div>
+            <div class="tripSummaryItem"><span>主要班次</span><strong>${d.train}</strong></div>
+            <div class="tripSummaryItem risk"><span>風險等級</span><strong>${d.risk}</strong></div>
+          </div>
+        </article>
+        <div class="confidenceStrip" aria-label="資料層級">
+          <div class="confidenceStep"><b>官方資訊</b><span>可引用</span></div>
+          <div class="confidenceStep"><b>當日推估</b><span>需保守</span></div>
+          <div class="confidenceStep"><b>歷史基準</b><span>只作參考</span></div>
+          <div class="confidenceStep"><b>未取得觀測</b><span>不承諾</span></div>
+        </div>
+        <div class="sourceList">${evidenceSources.map((s,i)=>`
+          <details class="sourceItem">
+            <summary><span class="sourceDot"></span><div><b>${s.name}</b><small>${s.updated}｜${s.impact}</small></div><span class="statusTag ${s.kind}">${s.status}</span></summary>
+            <div class="sourceDetail">
+              <dl><dt>推估層級</dt><dd>${s.level}</dd><dt>信心</dt><dd>${s.confidence}</dd><dt>如何使用</dt><dd>${s.use}</dd><dt>限制</dt><dd>${s.limit}</dd></dl>
+            </div>
+          </details>`).join('')}</div>
+        <article class="panelCard" style="margin-top:14px">
+          <h2>這些資料如何影響建議</h2>
+          <div class="impactList">${impacts.map(x=>`<div class="impactItem"><b>${x[0]}</b><p>${x[1]}</p></div>`).join('')}</div>
+        </article>
+        <div class="actionStack"><button class="primaryBtn" data-go="${isInbound ? 'inbound' : 'outbound'}" type="button">回到旅程決策卡</button></div>
+      `;
+    }
+
+    function renderFlow() {
+      const isInbound = appState.mode === 'inbound';
+      const d = scenarioData();
+      const layers = [
+        {
+          title: '旅客輸入層',
+          desc: isInbound ? '抵達航班、航廈、目的地方向與同行條件先轉成可判斷的接續需求。' : '出境航班、目前位置、同行條件與預留活動時間先轉成可判斷的出發需求。',
+          items: isInbound ? ['抵達航班與航廈', '目的地或轉乘方向', '行李、親子、長者同行'] : ['出境航班與航廈', '目前位置或 GPS', '停車、購物、同行條件']
+        },
+        {
+          title: '桃園機捷核心資料層',
+          desc: '以機捷公開班表、車站節點與停站模式作為主軸，先確認旅客能否以機捷完成主要移動。',
+          items: ['A1／A12／A13／A18 等節點', '直達車／普通車與表定旅行時間', '營運通阻未取得時保守標示']
+        },
+        {
+          title: '風險修正資料層',
+          desc: '航班、航廈、人潮、安檢、通關、行李、天候與後段轉乘只作風險修正，不取代機捷主判斷。',
+          items: ['官方資訊／當日推估', '當日預測／歷史基準', '目前未取得即時觀測則不承諾']
+        },
+        {
+          title: '規則式決策層',
+          desc: '用可說明的規則計算時間、班次、緩衝、風險與備案，避免黑箱式建議。',
+          rules: isInbound
+            ? [['出站界線', `${d.time} 前離開入境大廳`], ['主要班次', d.train], ['末班緩衝', d.buffer], ['風險', d.risk]]
+            : [['出門界線', `${d.time} 前出門`], ['入口站', d.entry], ['主要班次', d.train], ['風險', d.risk]]
+        },
+        {
+          title: '決策卡呈現層',
+          desc: '把複雜資料收斂成旅客可立即行動的卡片：下一步、進度、班次、緩衝、風險、依據與備案。',
+          items: isInbound ? ['入境接續卡', '建議依據檢視', '夜間備案提示'] : ['出境旅程卡', '建議依據檢視', '延誤或人潮備案']
+        }
+      ];
+      return `
+        <article class="panelCard"><span class="eyebrow"><span class="dot"></span>系統決策流程</span><h2>${isInbound ? '從抵達資訊到接續交通建議' : '從出發資訊到機捷旅程建議'}</h2><p>AeroRail 以桃園機捷為核心，將航班、航廈與環境資料作為風險修正；沒有直接即時資料時，採用當日推估或歷史基準並清楚標示。</p></article>
+        <div class="flowDiagram">${layers.map((l,i)=>`<div class="layerCard"><div class="layerHead"><span class="layerNo">${i+1}</span><div><h3>${l.title}</h3><p>${l.desc}</p></div></div>${l.rules ? `<div class="decisionRuleGrid">${l.rules.map(r=>`<div class="decisionRule"><b>${r[0]}</b><small>${r[1]}</small></div>`).join('')}</div>` : `<div class="miniList">${l.items.map(item=>`<span>${item}</span>`).join('')}</div>`}</div>`).join('')}</div>
+        <div class="actionStack"><button class="primaryBtn" data-go="${isInbound ? 'inbound' : 'outbound'}" type="button">回到${isInbound ? '接續卡' : '旅程卡'}</button></div>
+      `;
+    }
+
+    function renderOps() {
+      const isInbound = appState.mode === 'inbound';
+      const trends = isInbound
+        ? [
+            ['夜間接續提醒', '若晚間抵達查詢集中，可在入境大廳與機捷入口加強末班與夜間備案提醒。'],
+            ['A18 轉乘需求', '高鐵接續查詢偏多時，可加強 A18 月台方向與末段班次確認提示。'],
+            ['行李延遲風險', '匿名趨勢若顯示行李等待拉長，旅客端可提前提高緩衝與備案提示。']
+          ]
+        : [
+            ['A1 進站需求', '早晨出境查詢集中於 A1 時，可加強直達車月台、報到緩衝與航廈提醒。'],
+            ['航廈人潮偏高', '當日預測偏高時，旅客端提早提示報到與安檢緩衝，不顯示個別旅客資料。'],
+            ['停車銜接壓力', '停車條件被大量勾選時，可加強 A18 轉乘、找車位時間與接送備案提醒。']
+          ];
+      return `
+        <article class="panelCard"><span class="eyebrow"><span class="dot"></span>匿名彙整服務趨勢</span><h2>${isInbound ? '觀察接續需求，改善抵達後指引' : '觀察出境需求，改善前往機場指引'}</h2><p>此頁只呈現匿名彙整趨勢，用於服務提醒、站內指引與資訊設計改善；不顯示個別旅客行程、姓名、定位紀錄或可識別資料。</p></article>
+        <div class="opsGrid">
+          <div class="opsMetric"><span>${isInbound ? '熱門接續方向' : '熱門進站節點'}</span><strong>${isInbound ? '台北／A18' : 'A1／A18'}</strong></div>
+          <div class="opsMetric"><span>尖峰風險</span><strong>${isInbound ? '夜間偏緊' : '中高'}</strong></div>
+          <div class="opsMetric"><span>常見備案原因</span><strong>${isInbound ? '末班' : '人潮'}</strong></div>
+          <div class="opsMetric"><span>改善重點</span><strong>${isInbound ? '接續提示' : '提早提醒'}</strong></div>
+        </div>
+        <div class="trendList">${trends.map(t=>`<div class="trendItem"><b>${t[0]}</b><p>${t[1]}</p></div>`).join('')}</div>
+        <article class="panelCard" style="margin-top:14px"><h2>服務改善使用方式</h2><p>趨勢只用來調整旅客提醒、站內告示、節慶疏運資訊與常見備案說明；實際乘車與現場狀態仍以官方公告與車站顯示為準。</p></article>
+      `;
+    }
+
+    function renderBottomNav() {
+      bottomNav.innerHTML = navItems.map(([view, label, icon]) => {
+        const actual = view === 'outbound' && appState.mode === 'inbound' ? 'inbound' : view;
+        const displayLabel = view === 'outbound' ? (appState.mode === 'inbound' ? '接續卡' : '旅程卡') : label;
+        const active = appState.view === view || (view === 'outbound' && appState.view === 'inbound');
+        const iconMarkup = icon === 'home'
+          ? `<svg class="navIcon navSvg" viewBox="0 0 24 24" aria-hidden="true"><path d="m3.5 10.5 8.5-7 8.5 7V20a1 1 0 0 1-1 1h-4.5v-6h-6v6H4.5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"></path></svg>`
+          : `<span class="navIcon ${icon}"></span>`;
+        return `<button type="button" class="${active?'active':''}" data-go="${actual}">${iconMarkup}${displayLabel}</button>`;
+      }).join('');
+    }
+
+    function bind() {
+      document.getElementById('modeOutbound').onclick = () => setMode('outbound');
+      document.getElementById('modeInbound').onclick = () => setMode('inbound');
+      document.querySelectorAll('[data-go]').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.go)));
+      document.querySelectorAll('[data-purpose]').forEach(btn => btn.addEventListener('click', () => selectPurpose(btn.dataset.purpose)));
+      document.querySelectorAll('[data-chip]').forEach(btn => btn.addEventListener('click', () => {
+        const key = btn.dataset.chip;
+        appState.chips.has(key) ? appState.chips.delete(key) : appState.chips.add(key);
+        render();
+      }));
+      document.querySelectorAll('[data-scenario]').forEach(btn => btn.addEventListener('click', () => { appState.scenario = btn.dataset.scenario; render(); }));
+      document.querySelectorAll('[data-inbound-scenario]').forEach(btn => btn.addEventListener('click', () => { appState.inboundScenario = btn.dataset.inboundScenario; render(); }));
+      const gen = document.getElementById('generateBtn');
+      if (gen) gen.onclick = () => setView(appState.mode === 'inbound' ? 'inbound' : 'outbound');
+      const flight = document.getElementById('flightSelect');
+      if (flight) flight.onchange = () => { appState.flight = flight.value; };
+      const destInput = document.getElementById('destInput');
+      if (destInput) destInput.oninput = () => { appState.destination = destInput.value; };
+      const locInput = document.getElementById('locInput');
+      if (locInput) locInput.oninput = () => { appState.location = locInput.value; };
+      const gpsBtn = document.getElementById('gpsBtn');
+      if (gpsBtn && locInput) gpsBtn.onclick = () => {
+        locInput.value = '正在取得目前位置…';
+        if (!navigator.geolocation) {
+          locInput.value = '目前位置';
+          appState.location = locInput.value;
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            const lat = pos.coords.latitude.toFixed(5);
+            const lng = pos.coords.longitude.toFixed(5);
+            locInput.value = `目前位置（${lat}, ${lng}）`;
+            appState.location = locInput.value;
+          },
+          () => {
+            locInput.value = '目前位置';
+            appState.location = locInput.value;
+          },
+          { enableHighAccuracy: true, timeout: 4500, maximumAge: 60000 }
+        );
+      };
+    }
+
+    function render() {
+      document.body.dataset.mode = appState.mode;
+      document.body.dataset.view = appState.view;
+      document.getElementById('statusPill').textContent = appState.mode === 'inbound' ? '資料更新 22:34' : '資料更新 06:42';
+      document.getElementById('modeOutbound').classList.toggle('active', appState.mode === 'outbound');
+      document.getElementById('modeInbound').classList.toggle('active', appState.mode === 'inbound');
+      const time = appState.mode === 'inbound' ? '22:34' : '06:42';
+      document.getElementById('phoneTime').textContent = time;
+      if (appState.view === 'home') root.innerHTML = renderHome();
+      else if (appState.view === 'input') root.innerHTML = renderInput();
+      else if (appState.view === 'outbound') root.innerHTML = renderDecision('outbound');
+      else if (appState.view === 'inbound') root.innerHTML = renderDecision('inbound');
+      else if (appState.view === 'evidence') root.innerHTML = renderEvidence();
+      else if (appState.view === 'flow') root.innerHTML = renderFlow();
+      else if (appState.view === 'ops') root.innerHTML = renderOps();
+      else root.innerHTML = renderHome();
+      renderBottomNav();
+      bind();
+    }
+
+    render();
+  </script>
+</body>
+</html>

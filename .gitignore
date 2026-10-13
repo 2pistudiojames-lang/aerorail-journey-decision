@@ -1,0 +1,28 @@
+# Credentials / runtime data
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+credentials.json
+secrets.json
+
+# Local tools / verification artifacts
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.cache/
+.qa/
+.planning/
+logs/
+*.log
+backups/
+.DS_Store
